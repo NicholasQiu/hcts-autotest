@@ -1,0 +1,21 @@
+#!/usr/bin/expect -f
+set hostname [lindex $argv 0]
+
+spawn scp $env(HOME)/.ssh/id_rsa.pub root@$hostname:/root/
+set timeout 5
+
+expect {
+	timeout {
+		echo "ssh copy id timeout" >> /tmp/hctsauto.log
+		exp_exit
+	}
+	"yes/no" {
+		send -- "yes\r"
+		exp_continue
+	}
+	"assword:" {
+		send -- "l1admin\r"
+		interact
+	}
+}
+

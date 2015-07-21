@@ -178,6 +178,73 @@ function rbtclient() {
 	sed "/$1/d" $HOME/.ssh/known_hosts > $HOME/.known_hosts_tmp
 	mv $HOME/.known_hosts_tmp $HOME/.ssh/known_hosts
 
-	expect /net/hcts.cn.oracle.com/export/automation/localscripts/
+	expect ../localscripts/scp_id_rsa.exp $1
+	expect ../localscripts/scp_ssh_copy_id.exp $1
+	expect ../localscripts/exec_ssh_copy_id.exp $1
 
+	return $EXIT_OK
+}
+
+function osverify() {
+	# make sure the given solaris is installed on the machine
+	# args: <hostname> <os_rel> <os_bld>
+
+	ping $1
+	if [ "$?" != "0" ]; then
+		echo "osverify: ping $1 FAIL"
+		return $EXIT_BAD
+	fi
+
+	ssh_copy_id $1
+	if [ "$?" != "0" ]; then
+		echo "osverify: ssh copy id FAIL"
+		return $EXIT_BAD
+	fi
+
+	branch=`ssh root@$1 pkg info entire | grep Branch | \
+		awk -F: '{print $2}' | \
+		sed 's/^ *//g;s/ *$//g'`
+
+	case "$2" in
+		"s11u3")
+			Branch="0.175.3.0.0.$3.0"
+			;;
+		"s12")
+			Branch="5.12.0.0.0.$3.0"
+			;;
+	esac
+
+	if [ "$branch" != "$Branch" ]; then
+		echo "osverify: Branch No. dismatch. Installation FAIL"
+		return $EXIT_BAD
+	fi
+
+	return $EXIT_OK
+}
+
+
+
+##
+### hcts installation related part
+##
+
+function hctsinstall() {
+	# args: <hostname> <hcts_ver> <hcts_bld>
+	arch=`getarch $1`
+	scp ../remotescripts/hcts_install.sh root@$1:/root
+	ssh root@$1 "/root/hcts_install.sh $1 ${arch} $2 $3"
+
+	return $EXIT_OK
+}
+
+function hctsreservenet0() {
+	ssh root@$1 "echo 'net0' > /opt/SUNWhcts/etc/exclude.conf"
+	return $EXIT_OK
+}
+
+function hctsreconfigure() {
+	scp ../remotescripts/hcts_reconfigure.exp root@$1:/root
+	ssh root@$1 "expect -f /root/hcts_reconfigure.exp"
+
+	return $EXIT_OK
 }

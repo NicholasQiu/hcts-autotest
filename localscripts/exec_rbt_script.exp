@@ -1,0 +1,20 @@
+#!/usr/bin/expect -f
+set hostname [lindex $argv 0]
+
+spawn ssh root@$hostname /root/rbt.sh
+set timeout 5
+
+expect {
+	timeout {
+		echo "exec reboot script timeout" >> /tmp/hctsauto.log
+		exp_exit
+	}
+	"yes/no" {
+		send -- "yes\r"
+		exp_continue
+	}
+	"assword:" {
+		send -- "l1admin\r"
+		interact
+	}
+}

@@ -1,0 +1,23 @@
+#!/usr/bin/expect
+
+spawn /opt/SUNWhcts/bin/reconfigure
+set timeout 10
+
+expect {
+	timeout {
+		send_user "timeout!"
+		exp_exit
+	}
+	"Do you want to set up Oracle HCTS executing environment" {
+		send -- "y\r"
+		exp_continue
+	}
+	"Is Oracle Solaris running on a virtual machine" {
+		send -- "n\r"
+		exp_continue
+	}
+	"Do you want to continue" {
+		send -- "y\r"
+		interact
+	}
+}

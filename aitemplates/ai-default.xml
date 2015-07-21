@@ -1,0 +1,33 @@
+<!DOCTYPE auto_install SYSTEM "file:///usr/share/install/ai.dtd.1">
+<auto_install>
+  <ai_instance name="default" auto_reboot="true">
+    <target>
+      <disk whole_disk="true">
+        <disk_keyword key="boot_disk"/>
+      </disk>
+      <logical noswap="false" nodump="false">
+        <zpool name="rpool" is_root="true">
+          <vdev name="vdev" redundancy="none"/>
+	  <filesystem name="export" mountpoint="/export"/>
+          <filesystem name="export/home"/>
+          <be name="s11u3_22"/>
+        </zpool>
+      </logical>
+    </target>
+    <software type="IPS">
+      <source>
+        <publisher name="solaris">
+          <origin name="http://pkg801.cn.oracle.com/s11u3/"/>
+        </publisher>
+        <publisher name="hcts">
+          <origin name="http://hcts.cn.oracle.com:5000"/>
+        </publisher>
+      </source>
+      <software_data action="install">
+        <name>pkg:/entire@0.5.11-0.175.3.0.0.22.0</name>
+        <name>pkg:/group/system/solaris-large-server</name>
+        <name>pkg:/first-boot-script</name>
+      </software_data>
+    </software>
+  </ai_instance>
+</auto_install>

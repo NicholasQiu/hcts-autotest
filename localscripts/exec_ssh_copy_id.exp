@@ -1,0 +1,20 @@
+#!/usr/bin/expect -f
+set hostname [lindex $argv 0]
+
+spawn ssh root@$hostname /root/ssh_copy_id.sh
+set timeout 10
+
+expect {
+	timeout {
+		echo "exec ssh_copy_id timeout" >> /tmp/hctsauto.log
+		exp_exit
+	}
+	"yes/no" {
+		send -- "yes\r"
+		exp_continue
+	}
+	"assword:" {
+		send -- "l1admin\r"
+		interact
+	}
+}
