@@ -21,7 +21,4 @@ expect {
 		send -- "\r"
 		exp_continue
 	}
-	"*" {
-		interact
-	}
 }

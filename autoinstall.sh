@@ -46,31 +46,40 @@ function autoinstall() {
 		return $E_HCTSBUILDCHK
 	}
 
-	osneedsinst $1 $2 $3 && {
+	osneedsinst $1 $2 $3
+	if [ "$?" == "0" ]; then
+
+		echo "AI Generating..."
 		aimanifestgen $2 $3 || {
 			echo "AI Generation Fail."
 			return $E_AIGEN
 		}
+		echo "Addclient..."
 		arch=`getarch $1`
 		addclient $3 $1 $2 ${arch} || {
 			echo "Addclient Fail."
 			return $E_ADDCLIENT
 		}
+		echo "Delclient..."
 		delclient $1 || {
 			echo "Delclient Fail."
 			return $E_DELCLIENT
 		}
+		echo "Rbtclient..."
 		rbtclient $1 || {
 			echo "Reboot Client Fail."
 			return $E_RBTCLIENT
 		}
 		sleep 1800
-	}
+	fi
 
+
+	echo "Solaris Verifying..."
 	osverify $1 $2 $3 || {
 		echo "Solaris Verify Fail."
 		return $E_OSVERIFY
 	}
+	hctsremove $1
 	hctsinstall $1 $4 $5 || {
 		echo "HCTS Installation Fail."
 		return $E_HCTSINST

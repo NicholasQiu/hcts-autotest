@@ -1,7 +1,7 @@
 #!/usr/bin/expect -f
 set hostname [lindex $argv 0]
 
-spawn scp remotescript/ssh_copy_id.sh  root@$hostname:/root
+spawn scp /net/hcts.cn.oracle.com/export/automation/remotescripts/ssh_copy_id.sh  root@$hostname:/root
 set timeout 10
 
 expect {
@@ -15,9 +15,6 @@ expect {
 	}
 	"assword:" {
 		send -- "l1admin\r"
-		interact
-	}
-	"*" {
 		interact
 	}
 }

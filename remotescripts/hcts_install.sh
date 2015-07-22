@@ -2,13 +2,13 @@
 
 # args: <hostname> <arch> <hcts_ver> <hcts_bld>
 
-test "$2" == "sparc" && HCTS_PKG="hcts.$3-sparc.tar.gz" || \
-	HCTS_PKG="hcts.$3.tar.gz"
+test "$1" == "sparc" && HCTS_PKG="hcts.$2-sparc.tar.gz" || \
+	HCTS_PKG="hcts.$2.tar.gz"
 
-cp /net/emei/projects/HCTS/Build/Build$3/$4/$HCTS_PKG /root
+cp /net/emei/projects/HCTS/Build/Build$2/$3/$HCTS_PKG /root
 tar zxf $HCTS_PKG
 
-cd hcts.$3 
+cd hcts.$2 
 cat > hcts_install.exp << EOF
 #/usr/bin/expect -f
 
@@ -28,3 +28,4 @@ expect {
 EOF
 
 expect hcts_install.exp
+rm -rf hcts_install.exp

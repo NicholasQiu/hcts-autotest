@@ -4,7 +4,7 @@ EXIT_OK=0
 EXIT_BAD=1
 
 AITIMESTAMP="`date +%s`"
-AITEMPLATE="/net/hcts.cn.oracle.com/export/automation/aimanifests/ai-manifest-template.xml"
+AITEMPLATE="/net/hcts.cn.oracle.com/export/automation/aitemplates/ai-manifest-template.xml"
 AIMANIFESTFILE_1="/net/hcts.cn.oracle.com/export/aimanifest/ai-$AITIMESTAMP.1.xml"
 AIMANIFESTFILE_2="/net/hcts.cn.oracle.com/export/aimanifest/ai-$AITIMESTAMP.2.xml"
 AIMANIFESTFILE="/net/hcts.cn.oracle.com/export/aimanifest/ai-$AITIMESTAMP.xml"
@@ -17,7 +17,8 @@ AIMANIFESTFILE="/net/hcts.cn.oracle.com/export/aimanifest/ai-$AITIMESTAMP.xml"
 
 function envinit() {
 	# verify the current host ready for hcts automation
-	if [ $(svcs -a | grep autofs | grep online) -ne 0 ]; then
+	svcs -a | grep autofs | grep online
+	if [ $? -ne 0 ]; then
 		svcadm enable svc:/system/filesystem/autofs:default
 		if [ "$?" != "0" ]; then
 			echo "envinit: autofs not online."
@@ -55,8 +56,8 @@ function sshkeypairgen() {
 function ssh_copy_id() {
 	# copy and cat the id_rsa.pub to remote machine's authorized
 	# args: <hostname>
-	sed "/$1/d" $HOME/.ssh/known_hosts > /root/.known_hosts_tmp
-	mv /root/.known_hosts_tmp > $HOME/.ssh/known_hosts
+	sed "/$1/d" $HOME/.ssh/known_hosts > $HOME/.known_hosts_tmp
+	mv $HOME/.known_hosts_tmp  $HOME/.ssh/known_hosts
 
 	expect /net/hcts.cn.oracle.com/export/automation/localscripts/scp_id_rsa.exp $1
 	expect /net/hcts.cn.oracle.com/export/automation/localscripts/scp_ssh_copy_id.exp $1
@@ -148,8 +149,8 @@ function osneedsinst() {
 	# check if the machine needs solaris installation
 	# args: <hostname> <os_rel> <os_bld>
 
-	sed "/$1/d" $HOME/.ssh/known_hosts > $HOME/.known_hosts_tmp
-	mv $HOME/.known_hosts_tmp $HOME/.ssh/known_hosts
+	sed "/$1/d" $HOME/.ssh/known_hosts > $HOME/known_hosts_tmp
+	mv $HOME/known_hosts_tmp $HOME/.ssh/known_hosts
 
 	ssh_copy_id $1
 	if [ "$?" != "0" ]; then
@@ -308,7 +309,15 @@ function hctsinstall() {
 	# args: <hostname> <hcts_ver> <hcts_bld>
 	arch=`getarch $1`
 	scp /net/hcts.cn.oracle.com/export/automation/remotescripts/hcts_install.sh root@$1:/root
-	ssh root@$1 "/root/hcts_install.sh $1 ${arch} $2 $3"
+	ssh root@$1 "/root/hcts_install.sh ${arch} $2 $3"
+
+	return $EXIT_OK
+}
+
+function hctsremove() {
+	# args: <hostname>
+	scp /net/hcts.cn.oracle.com/export/automation/remotescripts/hcts_remove.sh root@$1:/root
+	ssh root@$1 "/root/hcts_remove.sh"
 
 	return $EXIT_OK
 }
@@ -334,7 +343,7 @@ function remoteclean() {
 	# remove tempary scripts on remote machine
 	# args: <hostname>
 
-	ssh root@$1 "rm -rf /root/hcts_install.sh /root/hcts_reconfigure.exp"
+	ssh root@$1 "rm -rf /root/hcts_install.sh /root/hcts_reconfigure.exp /root/id_rsa.pub /root/ssh_copy_id.sh /root/hcts_remove.sh /root/hcts*"
 
 	return $EXIT_OK
 }
