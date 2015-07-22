@@ -1,0 +1,27 @@
+#!/usr/bin/expect -f
+
+spawn ssh-keygen -t rsa
+
+set timeout 5
+
+expect {
+	timeout {
+		send_user "ssh_key_gen.exp timeout."
+		exp_exit
+	}
+	"nter file in which to save the key" {
+		send -- "\r"
+		exp_continue
+	}
+	"nter passphrase" {
+		send -- "\r"
+		exp_continue
+	}
+	"nter same passphrase again" {
+		send -- "\r"
+		exp_continue
+	}
+	"*" {
+		interact
+	}
+}

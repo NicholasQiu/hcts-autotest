@@ -15,7 +15,55 @@ AIMANIFESTFILE="/net/hcts.cn.oracle.com/export/aimanifest/ai-$AITIMESTAMP.xml"
 ##
 # autofs  oraldap ssh-permitrootlogin x86-firstboot
 
+function envinit() {
+	# verify the current host ready for hcts automation
+	if [ $(svcs -a | grep autofs | grep online) -ne 0 ]; then
+		svcadm enable svc:/system/filesystem/autofs:default
+		if [ "$?" != "0" ]; then
+			echo "envinit: autofs not online."
+			return $EXIT_BAD
+		fi
+	fi
 
+	cd /ws/opg-lab-tools/ || {
+		/net/hcts.cn.oracle.com/export/automation/localscripts/oraldap init-ldapswitch
+		if [ "$?" != "0" ]; then
+			echo "envinit: init ldapswitch fail."
+			return $EXIT_BAD
+		fi
+	}
+
+	# verify the remote client PermitRootLogin
+	# this part to be continued?
+
+	return $EXIT_OK
+}
+
+
+##
+### ssh without password related functions
+##
+function sshkeypairgen() {
+	# generate ssh public/private key pair if it needs
+	if [ ! -f "$HOME/.ssh/id_rsa" ] || [ ! -f "$HOME/.ssh/id_rsa.pub" ]; then
+		expect /net/hcts.cn.oracle.com/export/automation/localscripts/ssh_key_gen.exp
+	fi
+
+	return $EXIT_OK
+}
+
+function ssh_copy_id() {
+	# copy and cat the id_rsa.pub to remote machine's authorized
+	# args: <hostname>
+	sed "/$1/d" $HOME/.ssh/known_hosts > /root/.known_hosts_tmp
+	mv /root/.known_hosts_tmp > $HOME/.ssh/known_hosts
+
+	expect /net/hcts.cn.oracle.com/export/automation/localscripts/scp_id_rsa.exp $1
+	expect /net/hcts.cn.oracle.com/export/automation/localscripts/scp_ssh_copy_id.exp $1
+	expect /net/hcts.cn.oracle.com/export/automation/localscripts/exec_ssh_copy_id.exp $1
+
+	return $EXIT_OK
+}
 
 ##
 ### the following three functions aim at parameters check.
@@ -97,6 +145,35 @@ function hctsbuildchk() {
 ### the following are Solaris Installation related functions
 ##
 function osneedsinst() {
+	# check if the machine needs solaris installation
+	# args: <hostname> <os_rel> <os_bld>
+
+	sed "/$1/d" $HOME/.ssh/known_hosts > $HOME/.known_hosts_tmp
+	mv $HOME/.known_hosts_tmp $HOME/.ssh/known_hosts
+
+	ssh_copy_id $1
+	if [ "$?" != "0" ]; then
+		echo "osneedsinst: ssh copy id FAIL"
+		return $EXIT_BAD
+	fi
+
+	branch=`ssh root@$1 pkg info entire | grep Branch | \
+		awk -F: '{print $2}' | \
+		sed 's/^ *//g;s/ *$//g'`
+
+	case "$2" in
+		"s11u3")
+			Branch="0.175.3.0.0.$3.0"
+			;;
+		"s12")
+			Branch="5.12.0.0.0.$3.0"
+			;;
+	esac
+
+	if [ "$branch" == "$Branch" ]; then
+		echo "osneedsinst: No need installation."
+		return $EXIT_BAD
+	fi
 
 	return $EXIT_OK
 }
@@ -178,9 +255,8 @@ function rbtclient() {
 	sed "/$1/d" $HOME/.ssh/known_hosts > $HOME/.known_hosts_tmp
 	mv $HOME/.known_hosts_tmp $HOME/.ssh/known_hosts
 
-	expect ../localscripts/scp_id_rsa.exp $1
-	expect ../localscripts/scp_ssh_copy_id.exp $1
-	expect ../localscripts/exec_ssh_copy_id.exp $1
+	expect /net/hcts.cn.oracle.com/export/automation/localscripts/scp_rbt_script.exp $1
+	expect /net/hcts.cn.oracle.com/export/automation/localscripts/exec_rbt_script.exp $1
 
 	return $EXIT_OK
 }
@@ -231,7 +307,7 @@ function osverify() {
 function hctsinstall() {
 	# args: <hostname> <hcts_ver> <hcts_bld>
 	arch=`getarch $1`
-	scp ../remotescripts/hcts_install.sh root@$1:/root
+	scp /net/hcts.cn.oracle.com/export/automation/remotescripts/hcts_install.sh root@$1:/root
 	ssh root@$1 "/root/hcts_install.sh $1 ${arch} $2 $3"
 
 	return $EXIT_OK
@@ -243,8 +319,22 @@ function hctsreservenet0() {
 }
 
 function hctsreconfigure() {
-	scp ../remotescripts/hcts_reconfigure.exp root@$1:/root
+	scp /net/hcts.cn.oracle.com/export/automation/remotescripts/hcts_reconfigure.exp root@$1:/root
 	ssh root@$1 "expect -f /root/hcts_reconfigure.exp"
+
+	return $EXIT_OK
+}
+
+
+##
+### clean tempary scripts
+##
+
+function remoteclean() {
+	# remove tempary scripts on remote machine
+	# args: <hostname>
+
+	ssh root@$1 "rm -rf /root/hcts_install.sh /root/hcts_reconfigure.exp"
 
 	return $EXIT_OK
 }

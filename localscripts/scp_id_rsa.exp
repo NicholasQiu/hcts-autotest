@@ -17,5 +17,8 @@ expect {
 		send -- "l1admin\r"
 		interact
 	}
+	"*" {
+		interact
+	}
 }
 
